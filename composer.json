@@ -1,0 +1,21 @@
+{
+  "name": "juztstack/juzt-studio-community",
+  "description": "Customizer editor for general settings and templates json - Community Edition",
+  "type": "wordpress-plugin",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "JuztStack",
+      "homepage": "https://juztstack.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.4",
+    "timber/timber": "^2.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "Juztstack\\JuztStudio\\Community\\": "src/"
+    }
+  }
+}

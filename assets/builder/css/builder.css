@@ -1,0 +1,1085 @@
+/**
+ * Juzt Studio - Template Builder Styles
+ * Vanilla JavaScript version - Sin jQuery
+ * 
+ * @package Juzt Studio
+ * @author Jesus Uzcategui
+ */
+
+/* ==========================================
+   RESET Y ESTILOS GENERALES
+   ========================================== */
+
+   .media-modal.wp-core-ui {
+    z-index: 9999999;
+  }
+
+.juzt-studio-wrap {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow-y: scroll;
+  z-index: 999999;
+  top: -10px;
+  left: 0;
+  background: #f1f1f1;
+  padding: 10px 0px 10px 10px;
+}
+
+.juzt-studio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  p {
+    margin-top: 0;
+  }
+
+  h1 {
+    font-size: 3rem;
+    color: #303030;
+    margin-bottom: 0;
+  }
+
+  .juzt-studio-close-app {
+    background-color: #c92828;
+    color: #f1f1f1;
+    padding: 10px 15px;
+    border: solid 1px #c1c1c1;
+    outline: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 20px;
+    text-transform: uppercase;
+    &:hover {
+      background-color: #a92222;
+    }
+  }
+}
+
+#juzt-studio-app {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  color: #1e1e1e;
+  line-height: 1.5;
+  margin: 20px 10px;
+}
+
+#juzt-studio-app * {
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   LAYOUT PRINCIPAL
+   ========================================== */
+
+.js-builder {
+  display: flex;
+  min-height: 600px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.js-sidebar {
+  width: 300px;
+  border-right: 1px solid #e0e0e0;
+  background: #f7f7f7;
+  overflow-y: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.js-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.js-sidebar .js-panel-content {
+  height: 80vh;
+  overflow-y: scroll;
+}
+
+.js-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.js-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ==========================================
+   TABS DEL SIDEBAR - NUEVO
+   ========================================== */
+
+.js-sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  background: #f7f7f7;
+  flex-shrink: 0;
+}
+
+.js-tab-btn {
+  flex: 1;
+  padding: 12px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.js-tab-btn:hover {
+  background: #fff;
+  color: #23282d;
+}
+
+.js-tab-btn.active {
+  color: #0073aa;
+  border-bottom-color: #0073aa;
+  background: #fff;
+}
+
+.js-tab-content {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.js-tab-content.active {
+  display: block;
+}
+
+/* ==========================================
+   EDITOR CONTAINER - NUEVO
+   ========================================== */
+
+.js-editor-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.js-editor {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.js-editor-container.split .js-editor {
+  flex: 0 0 50%;
+  border-right: 1px solid #ddd;
+}
+
+/* ==========================================
+   PREVIEW CONTAINER - NUEVO
+   ========================================== */
+
+.js-preview-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #f9f9f9;
+}
+
+.js-preview-header {
+  padding: 10px 15px;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.js-preview-frame {
+  flex: 1;
+  border: none;
+  background: #fff;
+}
+
+.js-preview-upgrade {
+  padding: 15px;
+  background: #fff8e5;
+  border-top: 1px solid #ffb900;
+  text-align: center;
+  font-size: 13px;
+}
+
+.js-preview-upgrade strong {
+  color: #996800;
+}
+
+/* ==========================================
+   PANELES
+   ========================================== */
+
+.js-panel {
+  margin-bottom: 0;
+}
+
+.js-panel-title {
+  padding: 12px 15px;
+  background: #f0f0f0;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid #e0e0e0;
+  margin: 0;
+}
+
+.js-panel-content {
+  padding: 15px;
+}
+
+/* ==========================================
+   LISTAS
+   ========================================== */
+
+.js-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.js-list-item {
+  padding: 10px 15px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.js-list-item:hover {
+  background: #f5f5f5;
+}
+
+.js-list-item.active {
+  background: #f0f7fc;
+  font-weight: 500;
+  color: #0073aa;
+  border-left: 3px solid #0073aa;
+}
+
+/* ==========================================
+   SECCIONES
+   ========================================== */
+
+.js-section {
+  margin-bottom: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  background: #fff;
+}
+
+.js-section-header {
+  padding: 12px 15px;
+  background: #f7f7f7;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.js-section-title {
+  font-weight: 600;
+  margin: 0;
+  font-size: 14px;
+}
+
+.js-section-content {
+  padding: 15px;
+}
+
+.js-section-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.js-section-indicator {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.js-section-meta {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.js-template-path {
+  font-family: monospace;
+  background: #f8f9fa;
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 11px;
+}
+
+.js-no-schema {
+  padding: 15px;
+  background: #f8f9fa;
+  border: 1px dashed #ddd;
+  border-radius: 4px;
+}
+
+.js-no-schema code {
+  background: #fff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+/* ==========================================
+   FORMULARIOS
+   ========================================== */
+
+.js-form-group {
+  margin-bottom: 15px;
+}
+
+.js-form-label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.js-form-input,
+.js-form-select,
+.js-form-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.js-form-input:focus,
+.js-form-select:focus,
+.js-form-textarea:focus {
+  border-color: #007cba;
+  box-shadow: 0 0 0 1px #007cba;
+  outline: none;
+}
+
+.js-form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.js-form-help {
+  font-size: 12px;
+  color: #757575;
+  margin-top: 5px;
+}
+
+.js-form-help code {
+  background: #f1f1f1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #d63384;
+}
+
+/* ==========================================
+   BOTONES
+   ========================================== */
+
+.js-button {
+  padding: 8px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.js-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px #fff, 0 0 0 3px #007cba;
+}
+
+.js-button-primary {
+  background: #007cba;
+  color: #fff;
+  border-color: #007cba;
+}
+
+.js-button-primary:hover {
+  background: #006ba1;
+  border-color: #006ba1;
+}
+
+.js-button-secondary {
+  background: #f7f7f7;
+  border-color: #ccc;
+  color: #555;
+}
+
+.js-button-secondary:hover {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.js-button-danger {
+  background: #dc3232;
+  color: #fff;
+  border-color: #dc3232;
+}
+
+.js-button-danger:hover {
+  background: #c92828;
+  border-color: #c92828;
+}
+
+.js-button-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.js-button-icon {
+  margin-right: 5px;
+}
+
+/* ==========================================
+   ESTADOS
+   ========================================== */
+
+.js-loading {
+  text-align: center;
+  padding: 50px 0;
+  color: #757575;
+}
+
+.js-empty {
+  text-align: center;
+  padding: 30px 20px;
+  color: #757575;
+  font-style: italic;
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+}
+
+.js-message {
+  padding: 10px 15px;
+  margin: 15px 0;
+  border-radius: 3px;
+}
+
+.js-message-success {
+  background: #ecf7ed;
+  border-left: 4px solid #46b450;
+  color: #2a7530;
+}
+
+.js-message-error {
+  background: #f8e8e8;
+  border-left: 4px solid #dc3232;
+  color: #a52424;
+}
+
+.js-message-warning {
+  background: #fff8e5;
+  border-left: 4px solid #ffb900;
+  color: #996800;
+}
+
+.js-message-info {
+  background: #e5f5fa;
+  border-left: 4px solid #00a0d2;
+  color: #00799f;
+}
+
+/* ==========================================
+   TIMBER STATUS
+   ========================================== */
+
+.js-timber-status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.js-timber-enabled {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.js-timber-disabled {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+/* ==========================================
+   CAMPOS DE IMAGEN
+   ========================================== */
+
+.js-image-field {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.js-image-field .js-form-input {
+  flex: 1;
+}
+
+.js-form-input[type="color"] {
+  width: 50px;
+  height: 50px;
+  padding: 4px;
+  border-radius: 3px;
+  border: 1px solid #ddd;
+}
+
+.js-image-preview {
+  position: relative;
+  margin-top: 10px;
+  max-width: 300px;
+  border: 1px solid #ddd;
+  padding: 5px;
+  border-radius: 3px;
+  background: #f9f9f9;
+}
+
+.js-image-preview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.js-remove-image {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(220, 50, 50, 0.8);
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.js-remove-image:hover {
+  background: rgba(220, 50, 50, 1);
+}
+
+/* ==========================================
+   BLOQUES
+   ========================================== */
+
+.js-blocks-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e1e5e9;
+}
+
+.js-available-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px dashed #ddd;
+}
+
+.js-available-block .js-add-block {
+  font-size: 12px;
+  padding: 6px 12px;
+  background: #0073aa;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.js-available-block .js-add-block:hover {
+  background: #005a87;
+}
+
+.js-section-blocks {
+  margin-top: 15px;
+}
+
+.js-empty-blocks {
+  color: #666;
+  font-style: italic;
+  padding: 20px;
+  text-align: center;
+  background: #f9f9f9;
+  border: 1px dashed #ddd;
+  border-radius: 4px;
+}
+
+.js-block {
+  margin-bottom: 15px;
+  border: 1px solid #c3c4c7;
+  border-radius: 4px;
+  background: white;
+}
+
+.js-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background: #f6f7f7;
+  border-bottom: 1px solid #c3c4c7;
+  border-radius: 4px 4px 0 0;
+}
+
+.js-block-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.js-block-icon {
+  font-size: 16px;
+}
+
+.js-block-type {
+  color: #666;
+  font-weight: normal;
+  font-size: 12px;
+}
+
+.js-block-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.js-block-type-selector {
+  padding: 4px 8px;
+  border: 1px solid #8c8f94;
+  border-radius: 3px;
+  font-size: 12px;
+  background: white;
+}
+
+.js-block-content {
+  padding: 15px;
+}
+
+.js-settings-group {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  border: 1px solid #e1e5e9;
+}
+
+.js-block-setting-input {
+  border-color: #0073aa !important;
+}
+
+.js-block-setting-input:focus {
+  box-shadow: 0 0 0 1px #0073aa;
+  border-color: #0073aa !important;
+}
+
+.js-block:hover {
+  border-color: #0073aa;
+}
+
+.js-block:hover .js-block-header {
+  background: #e7f3ff;
+}
+
+.js-move-block-up,
+.js-move-block-down {
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* ==========================================
+   SETTINGS GENERALES - NUEVO
+   ========================================== */
+
+.js-settings-field {
+  margin-bottom: 20px;
+}
+
+.js-settings-actions {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.js-general-setting-input {
+  /* Estilos heredados de js-form-input */
+}
+
+/* ==========================================
+   CODE MODAL - NUEVO
+   ========================================== */
+
+.js-code-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.js-code-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.js-code-modal-content {
+  position: relative;
+  background: #fff;
+  border-radius: 6px;
+  width: 90%;
+  max-width: 1000px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+
+.js-code-modal-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f7f7f7;
+  border-radius: 6px 6px 0 0;
+}
+
+.js-code-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.js-code-modal-body {
+  padding: 20px;
+  flex: 1;
+  overflow: auto;
+}
+
+.js-code-modal-textarea {
+  width: 100%;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.js-code-modal-textarea:focus {
+  outline: none;
+  border-color: #0073aa;
+  box-shadow: 0 0 0 1px #0073aa;
+}
+
+.js-code-modal-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f9f9f9;
+  border-radius: 0 0 6px 6px;
+}
+
+.js-code-modal-footer .js-help-text {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.js-expand-code {
+  margin-top: 5px;
+}
+
+/* ==========================================
+   HELPERS
+   ========================================== */
+
+.js-help-text {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.js-sections-info {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.js-sections-container {
+  /* Container para las secciones */
+}
+
+/* ==========================================
+   RESPONSIVO
+   ========================================== */
+
+@media (max-width: 1200px) {
+  .js-editor-container.split .js-editor {
+    flex: 0 0 40%;
+  }
+}
+
+@media (max-width: 782px) {
+  .js-builder {
+    flex-direction: column;
+  }
+
+  .js-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+    max-height: 400px;
+  }
+
+  .js-editor-container {
+    flex-direction: column;
+  }
+
+  .js-editor-container.split .js-editor {
+    flex: 1;
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .js-preview-container {
+    min-height: 400px;
+  }
+
+  .js-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .js-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .js-available-blocks {
+    flex-direction: column;
+  }
+
+  .js-block-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .js-block-actions {
+    align-self: stretch;
+    justify-content: space-between;
+  }
+
+  .js-block-type-selector {
+    flex: 1;
+    margin-right: 10px;
+  }
+
+  .js-code-modal-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+}
+
+/* Preview de archivos (no imágenes) */
+.js-file-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.js-file-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.js-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.js-file-info strong {
+  display: block;
+  font-size: 13px;
+  color: #23282d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.js-file-info small {
+  display: block;
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.js-media-preview-loading {
+  padding: 10px;
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.js-media-preview-content {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 600px) {
+  .js-sidebar-tabs {
+    font-size: 11px;
+  }
+
+  .js-tab-btn {
+    padding: 10px 5px;
+  }
+
+  .js-form-input,
+  .js-form-select,
+  .js-form-textarea {
+    font-size: 16px; /* Evita zoom en iOS */
+  }
+}
+
+/* ==========================================
+   DARK MODE (OPCIONAL)
+   ========================================== */
+
+@media (prefers-color-scheme: dark) {
+  /* Puedes agregar estilos dark mode aquí si quieres */
+}
+
+/* ==========================================
+   ANIMACIONES
+   ========================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.js-code-modal {
+  animation: fadeIn 0.2s ease;
+}
+
+/* ==========================================
+   UTILIDADES
+   ========================================== */
+
+.js-text-center {
+  text-align: center;
+}
+
+.js-mb-10 {
+  margin-bottom: 10px;
+}
+
+.js-mb-20 {
+  margin-bottom: 20px;
+}
+
+.js-mt-10 {
+  margin-top: 10px;
+}
+
+.js-mt-20 {
+  margin-top: 20px;
+}
+
+/* ==========================================
+   PRINT STYLES
+   ========================================== */
+
+@media print {
+  .js-builder {
+    border: none;
+    box-shadow: none;
+  }
+
+  .js-sidebar,
+  .js-header,
+  .js-button,
+  .js-preview-container {
+    display: none !important;
+  }
+}
+
+.js-message {
+  white-space: pre-line; /* Permite saltos de línea en el mensaje */
+  max-width: 600px;
+  margin: 15px auto;
+}
