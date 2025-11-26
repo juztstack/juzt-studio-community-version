@@ -939,7 +939,20 @@ class Builder
         }
 
         // Commit con Git si está disponible
-        $commit = apply_filters('wpvtp_queue_commit', null, $save_location['root_dir'], 'Update from Section builder: ' . $template_name);
+        $commit_theme_path = get_template_directory();
+        $commit_message = 'Updated template: ' . $template_name . ' from Builder';
+        $commit_file_path_relative = str_replace(trailingslashit($commit_theme_path), '', $template_file);
+
+        sleep(1);
+
+        // Commit con Git si está disponible
+        $commit = apply_filters(
+            'wpvtp_queue_commit',
+            null,
+            $commit_theme_path,
+            $commit_message,
+            $commit_file_path_relative
+        );
         if ($commit) {
             $response_data['commit'] = $commit;
         }
@@ -1148,9 +1161,9 @@ class Builder
                 <div>
                     <h1>
                         <img
-                            style="width: 250px;" 
-                            src="<?php echo JUZTSTUDIO_CM_PLUGIN_URL . 'assets/images/logo-text.png'; ?>" 
-                            alt="<?php echo esc_html__('JuztStudio Community Version', 'sections-builder'); ?>"/>
+                            style="width: 250px;"
+                            src="<?php echo JUZTSTUDIO_CM_PLUGIN_URL . 'assets/images/logo-text.png'; ?>"
+                            alt="<?php echo esc_html__('JuztStudio Community Version', 'sections-builder'); ?>" />
                     </h1>
                     <p>Customizer themes created by <a href="www.juztstack.dev" target="_blank">JuztStack</a></p>
                 </div>
