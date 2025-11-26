@@ -33,6 +33,60 @@ class TimberExtension extends AbstractExtension
     }
 
     /**
+     * Renderizar snippet
+     * 
+     * Uso en Twig:
+     * {{ render_snippet('hello-orbit-feature', {title: 'Mi título', description: 'Texto'}) }}
+     * {{ snippet('hello-orbit-feature', block) }}
+     * 
+     * @param string $snippet_name Nombre del snippet (sin .twig)
+     * @param array $context Variables a pasar al snippet
+     * @return string HTML renderizado
+     */
+    public function renderSnippet($snippet_name, $context = [])
+    {
+        $core = \Juztstack\JuztStudio\Community\Core::get_instance();
+
+        if (!$core) {
+            error_log("⚠️ Core not available for snippet: {$snippet_name}");
+            return "<!-- Snippet '{$snippet_name}' error: Core not available -->";
+        }
+
+        // Buscar snippet en el registry
+        $snippet_file = $core->find_snippet_file($snippet_name);
+
+        if (!$snippet_file || !file_exists($snippet_file)) {
+            error_log("⚠️ Snippet not found: {$snippet_name}");
+            return "<!-- Snippet '{$snippet_name}' not found -->";
+        }
+
+        // Renderizar con Timber
+        try {
+            $relative_path = str_replace(
+                [get_template_directory(), get_stylesheet_directory()],
+                '',
+                $snippet_file
+            );
+
+            $relative_path = ltrim($relative_path, '/');
+
+            return \Timber\Timber::compile($relative_path, $context);
+        } catch (\Exception $e) {
+            error_log("❌ Error rendering snippet '{$snippet_name}': " . $e->getMessage());
+            return "<!-- Snippet '{$snippet_name}' error: " . esc_html($e->getMessage()) . " -->";
+        }
+    }
+
+    /**
+     * Native functions
+     */
+
+    public function getThemeUrl()
+    {
+        return get_template_directory_uri();
+    }
+
+    /**
      * Registrar funciones
      */
     public function getFunctions()
@@ -40,11 +94,15 @@ class TimberExtension extends AbstractExtension
         return [
             new TwigFunction('attachment', [$this, 'getAttachment']),
             new TwigFunction('get_menu_items', [$this, 'getMenuItems']),
+            new TwigFunction('theme_url', [$this, 'getThemeUrl']),
+            new TwigFunction('render_snippet', [$this, 'renderSnippet'], ['is_safe' => ['html']]),
+            new TwigFunction('snippet', [$this, 'renderSnippet'], ['is_safe' => ['html']]),
         ];
     }
 
-    public function getMenuItems ( $menu_name ) {
-        $menu = Timber::get_menu( $menu_name );
+    public function getMenuItems($menu_name)
+    {
+        $menu = Timber::get_menu($menu_name);
         return $menu ? $menu->items : [];
     }
 
@@ -89,7 +147,7 @@ class TimberExtension extends AbstractExtension
         }
 
         $attachment_id = intval($attachment_id);
-        
+
         if (!$attachment_id) {
             return '';
         }
@@ -107,7 +165,7 @@ class TimberExtension extends AbstractExtension
         }
 
         $attachment_id = intval($attachment_id);
-        
+
         if (!$attachment_id) {
             return '';
         }
@@ -125,7 +183,7 @@ class TimberExtension extends AbstractExtension
         }
 
         $attachment_id = intval($attachment_id);
-        
+
         if (!$attachment_id) {
             return '';
         }
@@ -144,7 +202,7 @@ class TimberExtension extends AbstractExtension
         }
 
         $attachment_id = intval($attachment_id);
-        
+
         if (!$attachment_id || !wp_attachment_is_image($attachment_id)) {
             return '';
         }
@@ -169,7 +227,7 @@ class TimberExtension extends AbstractExtension
         }
 
         $attachment_id = intval($attachment_id);
-        
+
         if (!$attachment_id) {
             return '';
         }
@@ -194,13 +252,13 @@ class TimberExtension extends AbstractExtension
         }
 
         $attachment_id = intval($attachment_id);
-        
+
         if (!$attachment_id) {
             return null;
         }
 
         $attachment = get_post($attachment_id);
-        
+
         if (!$attachment) {
             return null;
         }
@@ -222,7 +280,7 @@ class TimberExtension extends AbstractExtension
             $data['width'] = isset($metadata['width']) ? $metadata['width'] : 0;
             $data['height'] = isset($metadata['height']) ? $metadata['height'] : 0;
             $data['srcset'] = wp_get_attachment_image_srcset($attachment_id);
-            
+
             // Tamaños disponibles
             $data['sizes'] = [];
             $sizes = get_intermediate_image_sizes();

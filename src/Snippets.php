@@ -30,10 +30,10 @@ class Snippets {
     public function find_snippet_file($name) {
         $possible_paths = [
             // Buscar en el tema activo
-            get_template_directory() . "/{$this->theme_directory}/{$name}.php",
+            get_template_directory() . "/views/{$this->theme_directory}/{$name}.twig",
             
             // Buscar en el plugin
-            JUZTSTUDIO_CM_PLUGIN_PATH . "snippets/{$name}.php",
+            JUZTSTUDIO_CM_PLUGIN_PATH . "snippets/{$name}.twig",
         ];
         
         // Permitir filtrar rutas
