@@ -130,6 +130,45 @@ class ExtensionRegistry
     }
 
     /**
+     * Limpiar extensión específica del índice - NUEVO
+     * 
+     * @param string $ext_id
+     */
+    public function remove_extension($ext_id)
+    {
+        if (!isset($this->extensions[$ext_id])) {
+            error_log("⚠️ Extension not found in registry: {$ext_id}");
+            return false;
+        }
+
+        error_log("🗑️ Removing extension from registry: {$ext_id}");
+
+        // Eliminar de extensions
+        unset($this->extensions[$ext_id]);
+
+        // Eliminar del índice
+        if (isset($this->index['sections'][$ext_id])) {
+            unset($this->index['sections'][$ext_id]);
+        }
+
+        if (isset($this->index['templates'][$ext_id])) {
+            unset($this->index['templates'][$ext_id]);
+        }
+
+        if (isset($this->index['snippets'][$ext_id])) {
+            unset($this->index['snippets'][$ext_id]);
+        }
+
+        // Limpiar cache y guardar
+        $this->clear_cache();
+        $this->save_to_cache();
+
+        error_log("✅ Extension removed from registry: {$ext_id}");
+
+        return true;
+    }
+
+    /**
      * Escanear tema activo
      */
     private function scan_theme()

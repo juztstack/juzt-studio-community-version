@@ -1127,12 +1127,12 @@ class Builder
     public function register_admin_menu()
     {
         add_menu_page(
-            __('Template Builder', 'sections-builder'),
-            __('Template Builder', 'sections-builder'),
+            __('JuztStudio CM', 'sections-builder'),
+            __('JuztStudio CM', 'sections-builder'),
             'manage_options',
             'sections-builder-templates',
             [$this, 'render_admin_page'],
-            'dashicons-layout',
+            JUZTSTUDIO_CM_PLUGIN_URL . 'assets/images/logo-menu-small.png',
             30
         );
     }
@@ -1146,11 +1146,16 @@ class Builder
         <div class="wrap juzt-studio-wrap">
             <header class="juzt-studio-header">
                 <div>
-                    <h1><?php echo esc_html__('JuztStudio Community Version', 'sections-builder'); ?></h1>
+                    <h1>
+                        <img
+                            style="width: 250px;" 
+                            src="<?php echo JUZTSTUDIO_CM_PLUGIN_URL . 'assets/images/logo-text.png'; ?>" 
+                            alt="<?php echo esc_html__('JuztStudio Community Version', 'sections-builder'); ?>"/>
+                    </h1>
                     <p>Customizer themes created by <a href="www.juztstack.dev" target="_blank">JuztStack</a></p>
                 </div>
                 <button class="juzt-studio-close-app">
-                    Exit
+                    &#10005;
                 </button>
             </header>
             <div id="juzt-studio-app"></div>

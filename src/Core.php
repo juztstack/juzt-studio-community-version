@@ -143,6 +143,49 @@ class Core
     }
 
     /**
+     * Manejar desactivación de plugin con extensión - NUEVO
+     * 
+     * @param string $plugin_file Ruta del plugin (ej: 'juzt-extension/plugin.php')
+     */
+    public function handle_plugin_deactivation($plugin_file)
+    {
+        if (!$this->extension_registry) {
+            return;
+        }
+
+        error_log("=== PLUGIN DEACTIVATION: {$plugin_file} ===");
+
+        // Obtener directorio del plugin
+        $plugin_dir = dirname(WP_PLUGIN_DIR . '/' . $plugin_file);
+
+        // Buscar si tiene juzt-extension.php
+        $extension_file = $plugin_dir . '/juzt-extension.php';
+
+        if (!file_exists($extension_file)) {
+            error_log("No juzt-extension.php found, skipping");
+            return;
+        }
+
+        // Leer el config para obtener el ID
+        try {
+            $config = include $extension_file;
+
+            if (is_array($config) && !empty($config['id'])) {
+                $ext_id = sanitize_key($config['id']);
+
+                error_log("Extension ID found: {$ext_id}");
+
+                // Eliminar la extensión del Registry
+                $this->extension_registry->remove_extension($ext_id);
+
+                error_log("✅ Extension removed on plugin deactivation");
+            }
+        } catch (\Exception $e) {
+            error_log("Error reading extension config: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Inicializar el plugin
      */
     public function init()
@@ -264,9 +307,13 @@ class Core
      */
     private function register_cache_hooks()
     {
-        // Invalidar cache al activar/desactivar plugins
+        // Invalidar cache al activar plugins
         add_action('activated_plugin', [$this, 'invalidate_registry_cache']);
-        add_action('deactivated_plugin', [$this, 'invalidate_registry_cache']);
+
+        // ACTUALIZADO: Manejar desactivación con limpieza específica
+        add_action('deactivated_plugin', function ($plugin_file) {
+            $this->handle_plugin_deactivation($plugin_file);
+        });
 
         // Invalidar cache al cambiar de tema
         add_action('switch_theme', [$this, 'invalidate_registry_cache']);
