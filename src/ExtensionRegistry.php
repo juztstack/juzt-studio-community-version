@@ -112,6 +112,22 @@ class ExtensionRegistry
             }
         }
 
+        //error_log("".$config['adminAssets']."");
+
+        //Registrar admin assets
+        if (!empty($config['adminAssets'])) {
+            // Si ya pasó wp_enqueue_scripts, cargar directamente
+            if (did_action('admin_enqueue_scripts')) {
+                error_log("⚠️ wp_enqueue_scripts already fired, loading assets directly");
+                $this->load_admin_assets($config);
+            } else {
+                // Si no, registrar en el hook
+                add_action('admin_enqueue_scripts', function () use ($config) {
+                    $this->load_admin_assets($config);
+                }, 20); // Prioridad 20 para después de los assets del tema
+            }
+        }
+
         // Invalidar cache
         $this->clear_cache();
 
@@ -736,6 +752,46 @@ class ExtensionRegistry
     }
 
     /**
+     * Load Admin Assets - ACTUALIZADO con soporte para Vite
+     */
+    private function load_admin_assets($config)
+    {
+        if (empty($config['adminAssets'])) {
+            error_log("⚠️ No assets defined for extension: " . ($config['id'] ?? 'unknown'));
+            return;
+        }
+
+        $ext_id = $config['id'] ?? 'unknown';
+
+        // Determinar si estamos en modo desarrollo
+        $is_dev_mode = defined('JUZT_EXTENSION_DEVELOPMENT_MODE') && JUZT_EXTENSION_DEVELOPMENT_MODE;
+
+        error_log("=== LOADING ASSETS ADMIN FOR: {$ext_id} ===");
+        error_log("Development mode: " . ($is_dev_mode ? 'YES' : 'NO'));
+
+        // Seleccionar assets según el modo
+        $assets = $is_dev_mode
+            ? ($config['adminAssets']['development'] ?? [])
+            : ($config['adminAssets']['production'] ?? []);
+
+        if (empty($assets)) {
+            error_log("⚠️ No assets defined for current mode");
+            return;
+        }
+
+        // En modo desarrollo, cargar desde Vite
+        if ($is_dev_mode) {
+            $this->load_vite_assets($config, $assets);
+        }
+        // En producción, cargar assets compilados
+        else {
+            $this->load_production_assets($config, $assets);
+        }
+
+        error_log("=== ASSETS LOADED ===");
+    }
+
+    /**
      * Cargar assets desde Vite (desarrollo) - NUEVO
      */
     private function load_vite_assets($config, $assets)
@@ -745,7 +801,7 @@ class ExtensionRegistry
 
         error_log("Loading assets from Vite dev server: {$vite_server}");
 
-        // 1. Cargar el cliente de Vite (necesario para HMR)
+        // 1. Cargar el cliente de Vite
         wp_enqueue_script(
             "{$ext_id}-vite-client",
             "{$vite_server}/@vite/client",
@@ -754,7 +810,6 @@ class ExtensionRegistry
             false
         );
 
-        // Marcar como módulo ES
         add_filter('script_loader_tag', function ($tag, $handle) use ($ext_id) {
             if (
                 strpos($handle, "{$ext_id}-vite-client") !== false ||
@@ -787,7 +842,6 @@ class ExtensionRegistry
             }
         }
 
-        // En desarrollo, CSS se importa desde JS (no necesita enqueue separado)
         error_log("CSS loaded via Vite HMR (imported in JS)");
     }
 
@@ -819,6 +873,19 @@ class ExtensionRegistry
                 );
 
                 error_log("    ✅ Enqueued");
+
+                // ✅ NUEVO: Localizar script si existe config
+                if (!empty($assets['localize'][$handle])) {
+                    $localize = $assets['localize'][$handle];
+
+                    wp_localize_script(
+                        $handle,
+                        $localize['object_name'],
+                        $localize['data']
+                    );
+
+                    error_log("    ✅ Localized as: {$localize['object_name']}");
+                }
             }
         }
 
@@ -841,6 +908,19 @@ class ExtensionRegistry
 
                 error_log("    ✅ Enqueued");
             }
+        }
+
+        // ✅ NUEVO: Localizar en dev también
+        if (!empty($assets['localize'][$handle])) {
+            $localize = $assets['localize'][$handle];
+
+            wp_localize_script(
+                $handle,
+                $localize['object_name'],
+                $localize['data']
+            );
+
+            error_log("    ✅ Localized as: {$localize['object_name']}");
         }
     }
 
@@ -1006,21 +1086,37 @@ class ExtensionRegistry
 
                         $ext_id = sanitize_key($config['id']);
 
-                        // NUEVO: Si ya existe (del cache), solo registrar assets
                         if (isset($this->extensions[$ext_id])) {
                             error_log("📦 Extension loaded from cache: {$ext_id}, registering assets...");
 
                             // Actualizar config
                             $this->extensions[$ext_id] = array_merge($this->extensions[$ext_id], $config);
 
-                            // Registrar assets
+                            // Registrar assets frontend
                             if (!empty($config['assets'])) {
-                                add_action('wp_enqueue_scripts', function () use ($config) {
+                                if (did_action('wp_enqueue_scripts')) {
+                                    error_log("⚠️ wp_enqueue_scripts already fired, loading assets directly");
                                     $this->load_assets($config);
-                                }, 20);
+                                } else {
+                                    add_action('wp_enqueue_scripts', function () use ($config) {
+                                        $this->load_assets($config);
+                                    }, 20);
+                                }
                             }
 
-                            continue; // ← No intentar registrar de nuevo
+                            // Registrar admin assets
+                            if (!empty($config['adminAssets'])) {
+                                if (did_action('admin_enqueue_scripts')) {
+                                    error_log("⚠️ admin_enqueue_scripts already fired, loading admin assets directly");
+                                    $this->load_admin_assets($config);
+                                } else {
+                                    add_action('admin_enqueue_scripts', function () use ($config) {
+                                        $this->load_admin_assets($config);
+                                    }, 20);
+                                }
+                            }
+
+                            continue;
                         }
 
                         // Registrar nueva extensión
