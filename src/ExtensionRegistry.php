@@ -756,6 +756,11 @@ class ExtensionRegistry
      */
     private function load_admin_assets($config)
     {
+
+        if (!is_admin()) {
+            return;
+        }
+
         if (empty($config['adminAssets'])) {
             error_log("⚠️ No assets defined for extension: " . ($config['id'] ?? 'unknown'));
             return;
@@ -818,7 +823,7 @@ class ExtensionRegistry
                 return str_replace('<script', '<script type="module"', $tag);
             }
             return $tag;
-        }, 10, 2);
+        }, 5, 2);
 
         // 2. Cargar JS desde Vite
         if (!empty($assets['js']) && is_array($assets['js'])) {
@@ -839,7 +844,27 @@ class ExtensionRegistry
                 );
 
                 error_log("    ✅ Enqueued from Vite");
+
+                add_filter('script_loader_tag', function ($tag, $hand) use ($ext_id, $handle) {
+                    if ($hand == $handle) {
+                        return str_replace('<script', '<script type="module"', $tag);
+                    }
+                    return $tag;
+                }, 5, 2);
             }
+        }
+
+        // ✅ NUEVO: Localizar script si existe config
+        if (!empty($assets['localize'][$handle])) {
+            $localize = $assets['localize'][$handle];
+
+            wp_localize_script(
+                $handle,
+                $localize['object_name'],
+                $localize['data']
+            );
+
+            error_log("    ✅ Localized as: {$localize['object_name']}");
         }
 
         error_log("CSS loaded via Vite HMR (imported in JS)");
@@ -1166,5 +1191,37 @@ class ExtensionRegistry
         error_log("✅ Extension {$ext_id} refreshed");
 
         return true;
+    }
+
+    /**
+     * Obtener snippet específico
+     * 
+     * @param string $snippet_name
+     * @return string|null Path al archivo twig
+     */
+    public function get_snippet($snippet_name)
+    {
+        // 1. Buscar en tema
+        if (isset($this->index['snippets']['theme'][$snippet_name])) {
+            return $this->index['snippets']['theme'][$snippet_name]['twig_file'];
+        }
+
+        // 2. Buscar en extensiones
+        foreach ($this->index['snippets'] as $source => $snippets) {
+            if ($source === 'theme' || $source === 'core') {
+                continue;
+            }
+
+            if (isset($snippets[$snippet_name])) {
+                return $snippets[$snippet_name]['twig_file'];
+            }
+        }
+
+        // 3. Buscar en core
+        if (isset($this->index['snippets']['core'][$snippet_name])) {
+            return $this->index['snippets']['core'][$snippet_name]['twig_file'];
+        }
+
+        return null;
     }
 }

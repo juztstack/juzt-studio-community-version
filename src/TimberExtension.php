@@ -93,11 +93,134 @@ class TimberExtension extends AbstractExtension
     {
         return [
             new TwigFunction('attachment', [$this, 'getAttachment']),
+            new TwigFunction('get_post_meta', [$this, 'getPostMeta']),
             new TwigFunction('get_menu_items', [$this, 'getMenuItems']),
             new TwigFunction('theme_url', [$this, 'getThemeUrl']),
+            new TwigFunction('enqueue_asset', [$this, 'enqueueAsset']),
+            new TwigFunction('get_section_source', [$this, 'getSectionSource']),
             new TwigFunction('render_snippet', [$this, 'renderSnippet'], ['is_safe' => ['html']]),
             new TwigFunction('snippet', [$this, 'renderSnippet'], ['is_safe' => ['html']]),
         ];
+    }
+
+    public function enqueueAsset($type, $handle, $path, $source = 'theme')
+    {
+        static $loaded = [];
+        $key = $type . '_' . $handle;
+
+        if (isset($loaded[$key])) {
+            return;
+        }
+
+        $base_url = $this->get_base_url_from_source($source);
+
+        if ($type === 'js') {
+            \wp_enqueue_script(
+                'section-' . $handle,
+                $base_url . $path,
+                [],
+                null,
+                true
+            );
+
+            \add_filter('script_loader_tag', function ($tag, $h) use ($handle) {
+                if ($h === 'section-' . $handle) {
+                    return str_replace('<script', '<script type="module"', $tag);
+                }
+                return $tag;
+            }, 10, 2);
+        }
+
+        if ($type === 'css') {
+            \wp_enqueue_style(
+                'section-' . $handle,
+                $base_url . $path,
+                [],
+                null
+            );
+        }
+
+        $loaded[$key] = true;
+    }
+
+    private function get_base_url_from_source($source)
+    {
+        if ($source === 'theme' || $source === 'core') {
+            return get_template_directory_uri();
+        }
+
+        $core = \Juztstack\JuztStudio\Community\Core::get_instance();
+
+        if ($core && $core->extension_registry) {
+            $extension = $core->extension_registry->get_extension($source);
+
+            if ($extension && !empty($extension['paths']['assets_url'])) {
+                return rtrim($extension['paths']['assets_url'], '/');
+            }
+        }
+
+        return get_template_directory_uri();
+    }
+
+    public function getSectionSource($section_type)
+    {
+        $core = \Juztstack\JuztStudio\Community\Core::get_instance();
+
+        if (!$core || !$core->extension_registry) {
+            return 'theme';
+        }
+
+        $section_meta = $core->extension_registry->get_section($section_type);
+
+        return $section_meta['source'] ?? 'theme';
+    }
+
+    /**
+     * Auto-detectar URL base del asset
+     */
+    private function detect_asset_url($path)
+    {
+        // Verificar si existe en el tema
+        if (file_exists(\get_template_directory() . $path)) {
+            return \get_template_directory_uri();
+        }
+
+        // Buscar en extensiones activas
+        $core = \Juztstack\JuztStudio\Community\Core::get_instance();
+
+        if ($core && $core->extension_registry) {
+            $extensions = $core->extension_registry->get_extensions();
+
+            foreach ($extensions as $ext_id => $ext_config) {
+                if (empty($ext_config['paths']['plugin_dir'])) {
+                    continue;
+                }
+
+                $full_path = $ext_config['paths']['plugin_dir'] . $path;
+
+                if (file_exists($full_path)) {
+                    return rtrim($ext_config['paths']['assets_url'], '/');
+                }
+            }
+        }
+
+        // Fallback
+        return \get_template_directory_uri();
+    }
+
+    public function getPostMeta(String $key, Int $postId, Bool $single = true)
+    {
+        $value = \get_post_meta($postId, $key, $single);
+
+        // Si viene serializado, deserializar
+        if (is_string($value) && $single) {
+            $unserialized = maybe_unserialize($value);
+            if ($unserialized !== false) {
+                return $unserialized;
+            }
+        }
+
+        return $value;
     }
 
     public function getMenuItems($menu_name)

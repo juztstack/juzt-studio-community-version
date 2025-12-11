@@ -293,17 +293,18 @@ class Core
     private function register_hooks()
     {
         // Hooks para templates
-        add_filter('template_include', [$this->templates, 'template_include']);
+        \add_filter('template_include', [$this->templates, 'template_include']);
 
         // Hooks para metaboxes
         if (is_admin()) {
-            add_action('add_meta_boxes', [$this->templates, 'register_meta_boxes']);
-            add_action('save_post', [$this->templates, 'save_meta_boxes']);
+            \add_action('add_meta_boxes', [$this->templates, 'register_meta_boxes']);
+            \add_action('save_post', [$this->templates, 'save_meta_boxes']);
         }
 
         // NUEVO: Registrar templates de extensiones
-        add_filter('theme_page_templates', [$this, 'register_extension_templates']);
-        add_filter('template_include', [$this, 'load_extension_template']);
+        \add_filter('theme_page_templates', [$this, 'register_extension_templates']);
+        \add_filter('template_include', [$this, 'load_extension_template']);
+        \add_filter('timber/context', [$this, 'addMetadataToContextTwig'], 2000);
     }
 
     /**
@@ -312,18 +313,18 @@ class Core
     private function register_cache_hooks()
     {
         // Invalidar cache al activar plugins
-        add_action('activated_plugin', [$this, 'invalidate_registry_cache']);
+        \add_action('activated_plugin', [$this, 'invalidate_registry_cache']);
 
         // ACTUALIZADO: Manejar desactivación con limpieza específica
-        add_action('deactivated_plugin', function ($plugin_file) {
+        \add_action('deactivated_plugin', function ($plugin_file) {
             $this->handle_plugin_deactivation($plugin_file);
         });
 
         // Invalidar cache al cambiar de tema
-        add_action('switch_theme', [$this, 'invalidate_registry_cache']);
+        \add_action('switch_theme', [$this, 'invalidate_registry_cache']);
 
         // Invalidar cache al actualizar el plugin
-        add_action('upgrader_process_complete', [$this, 'invalidate_registry_cache'], 10, 2);
+        \add_action('upgrader_process_complete', [$this, 'invalidate_registry_cache'], 10, 2);
     }
 
     /**
@@ -355,12 +356,36 @@ class Core
 
     public function protected_templates_json()
     {
-        var_dump($_SERVER['REQUEST_URI']);
         if (
             strpos($_SERVER['REQUEST_URI'], '/templates/') !== false
             && pathinfo($_SERVER['REQUEST_URI'], PATHINFO_EXTENSION) === 'json'
         ) {
             wp_die('Access denied');
         }
+    }
+
+    public function addMetadataToContextTwig($context)
+    {
+        // Si hay sections en el contexto, enriquecerlas
+        if (!empty($context['sections'])) {
+            $core = \Juztstack\JuztStudio\Community\Core::get_instance();
+            $registry = $core ? $core->extension_registry : null;
+
+            foreach ($context['sections'] as $section_id => &$section) {
+                $section_type = $section['section_id'] ?? null;
+
+                if ($section_type && $registry) {
+                    $section_meta = $registry->get_section($section_type);
+
+                    if ($section_meta) {
+                        $section['_meta'] = [
+                            'source' => $section_meta['source'] ?? 'theme',
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $context;
     }
 }
