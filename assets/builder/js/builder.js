@@ -26,6 +26,9 @@
     activeTabs: {},
     previewMode: false, // NUEVO: Modo preview
     previewRefreshTimeout: null, // NUEVO: Para debounce del preview
+
+    isDirty: false, // ✅ NUEVO
+    originalState: null, // ✅ NUEVO
   };
 
   // ==========================================
@@ -169,7 +172,7 @@
         
         <!-- Panel de Secciones -->
         <div class="js-panel js-tab-content" data-tab-content="sections">
-          <h3 class="js-panel-title">Available Twig Sections</h3>
+          <h3 class="js-panel-title">Available Sections</h3>
           <div class="js-panel-content">
             <ul id="js-sections-list" class="js-list"></ul>
             <div class="js-sections-info">
@@ -547,6 +550,7 @@
         if (listItem) {
           const templateId = listItem.getAttribute("data-id");
           loadTemplate(templateId);
+          switchTab('sections');
         }
       });
     }
@@ -567,6 +571,22 @@
     // ==========================================
 
     if (dom.editor) {
+
+      // Usar MutationObserver para cambios en el DOM
+      const observer = new MutationObserver(() => {
+        updateSaveButtonState();
+      });
+
+      observer.observe(dom.editor, {
+        childList: true,
+        subtree: true,
+      });
+
+      // También detectar inputs manualmente
+      dom.editor.addEventListener('input', debounce(() => {
+        updateSaveButtonState();
+      }, 300));
+
       // Toggle sección
       dom.editor.addEventListener("click", function (e) {
         const sectionHeader = e.target.closest(".js-section-header");
@@ -800,6 +820,14 @@
         }
       });
     }
+
+    window.addEventListener('beforeunload', (e) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    });
   }
 
   // Helper: Obtener valor del input según tipo
@@ -877,6 +905,58 @@
     } catch (error) {
       console.error("Error loading templates:", error);
       await loadTemplatesLegacy();
+    }
+  }
+
+  function saveOriginalState() {
+    if (!state.selectedTemplate) {
+      state.originalState = null;
+      return;
+    }
+
+    state.originalState = JSON.stringify({
+      template: state.selectedTemplate._originalId,
+      order: state.selectedTemplate.order || [],
+      sections: state.selectedTemplate.sections || {},
+      name: state.selectedTemplate.name,
+      description: state.selectedTemplate.description,
+    });
+
+    console.log("✅ Estado original guardado");
+  }
+
+  function hasUnsavedChanges() {
+    if (!state.originalState || !state.selectedTemplate) {
+      return false;
+    }
+
+    const currentState = JSON.stringify({
+      template: state.selectedTemplate._originalId,
+      order: state.selectedTemplate.order || [],
+      sections: state.selectedTemplate.sections || {},
+      name: state.selectedTemplate.name,
+      description: state.selectedTemplate.description,
+    });
+
+    return state.originalState !== currentState;
+  }
+
+  function updateSaveButtonState() {
+    const hasChanges = hasUnsavedChanges();
+    state.isDirty = hasChanges;
+
+    if (dom.saveButton) {
+      if (hasChanges) {
+        dom.saveButton.innerHTML = "● Guardar cambios";
+        dom.saveButton.style.fontWeight = "600";
+        dom.saveButton.style.background = "#2271b1";
+        dom.saveButton.style.color = "white";
+      } else {
+        dom.saveButton.innerHTML = "💾 Save";
+        dom.saveButton.style.fontWeight = "400";
+        dom.saveButton.style.background = "";
+        dom.saveButton.style.color = "";
+      }
     }
   }
 
@@ -1243,6 +1323,10 @@
         initExpandedSections();
         renderTemplateEditor();
         schedulePreviewRefresh(); // NUEVO
+
+        saveOriginalState();
+        updateSaveButtonState();
+
         setLoading(false);
       } else {
         throw new Error(data.data?.message || "Error loading the template");
@@ -1283,11 +1367,11 @@
       if (data.success) {
         alert(
           "✅ " +
-            data.data.message +
-            "\n\nTemplates: " +
-            data.data.templates_count +
-            "\nSections: " +
-            data.data.sections_count
+          data.data.message +
+          "\n\nTemplates: " +
+          data.data.templates_count +
+          "\nSections: " +
+          data.data.sections_count
         );
         location.reload(); // Recargar para ver cambios
       } else {
@@ -1389,6 +1473,8 @@
         state.selectedTemplate._originalId = templateName;
         state.selectedTemplate._createFiles = createFiles;
         await loadTemplates();
+        saveOriginalState();
+        updateSaveButtonState();
         setLoading(false);
       } else {
         throw new Error(data.data?.message || "Error saving template");
@@ -1610,9 +1696,8 @@
           template.id === state.selectedTemplate._originalId;
 
         html += `
-        <div class="js-list-item js-template-item ${
-          isActive ? "active" : ""
-        }" data-id="${template.id}">
+        <div class="js-list-item js-template-item ${isActive ? "active" : ""
+          }" data-id="${template.id}">
           <div class="js-template-info">
             <div class="js-template-name">
               ${escapeHtml(template.name)}
@@ -1620,21 +1705,19 @@
             </div>
             <div class="js-template-meta">
               <span>${template.sections_count || 0} sections</span>
-              ${
-                template.post_type
-                  ? `<span class="js-post-type-badge">${escapeHtml(
-                      template.post_type
-                    )}</span>`
-                  : ""
-              }
+              ${template.post_type
+            ? `<span class="js-post-type-badge">${escapeHtml(
+              template.post_type
+            )}</span>`
+            : ""
+          }
             </div>
-            ${
+            ${template.description
+            ? `<div class="js-template-description">${escapeHtml(
               template.description
-                ? `<div class="js-template-description">${escapeHtml(
-                    template.description
-                  )}</div>`
-                : ""
-            }
+            )}</div>`
+            : ""
+          }
           </div>
         </div>
       `;
@@ -1825,24 +1908,22 @@
         const schemaIndicator = hasSchema ? "⚙️" : "📄";
 
         html += `
-        <div class="js-list-item js-section-item" data-id="${
-          section.id
-        }" title="${escapeHtml(
-          section.description || "Section " + section.name
-        )}">
+        <div class="js-list-item js-section-item" data-id="${section.id
+          }" title="${escapeHtml(
+            section.description || "Section " + section.name
+          )}">
           <div class="js-section-info">
             <div class="js-section-name">
               <span class="js-section-indicator">${schemaIndicator}</span>
               ${escapeHtml(section.name)}
               <span class="js-section-badge ${badgeClass}">${badgeText}</span>
             </div>
-            ${
+            ${section.description
+            ? `<div class="js-section-description">${escapeHtml(
               section.description
-                ? `<div class="js-section-description">${escapeHtml(
-                    section.description
-                  )}</div>`
-                : ""
-            }
+            )}</div>`
+            : ""
+          }
           </div>
         </div>
       `;
@@ -2069,19 +2150,17 @@
           data-language="${language}"
           rows="8"
         >${escapeHtml(value)}</textarea>
-        ${
-          expandable
-            ? `
+        ${expandable
+          ? `
           <button class="js-button js-button-secondary js-expand-code" style="margin-top: 5px;">
             ⛶ Expandir Editor
           </button>
         `
-            : ""
+          : ""
         }
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2110,19 +2189,17 @@
           data-language="${language}"
           rows="8"
         >${escapeHtml(value)}</textarea>
-        ${
-          expandable
-            ? `
+        ${expandable
+          ? `
           <button class="js-button js-button-secondary js-expand-code" style="margin-top: 5px;">
             ⛶ Expandir Editor
           </button>
         `
-            : ""
+          : ""
         }
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2159,13 +2236,11 @@
           ${mediaType === "image" ? "📷 Select" : "📎 Select"}
         </button>
       </div>
-      <div id="${previewId}" class="js-image-preview" style="${
-        hasMedia ? "" : "display: none;"
-      }">
-        ${
-          hasMedia
-            ? `<div class="js-media-preview-loading">Cargando preview...</div>`
-            : ""
+      <div id="${previewId}" class="js-image-preview" style="${hasMedia ? "" : "display: none;"
+        }">
+        ${hasMedia
+          ? `<div class="js-media-preview-loading">Cargando preview...</div>`
+          : ""
         }
         <button 
           class="js-button js-button-danger js-remove-image" 
@@ -2173,11 +2248,10 @@
           data-preview="${previewId}"
           type="button">×</button>
       </div>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
 
@@ -2205,10 +2279,9 @@
           placeholder="https://youtube.com/watch?v=..."
         />
         <small class="js-form-help">📹 Acepta YouTube, Vimeo, etc.</small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2231,10 +2304,9 @@
           style="font-family: monospace;"
         />
         <small class="js-form-help">📌 Se ejecutará con do_shortcode() en Twig</small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2268,10 +2340,9 @@
           <option value="">-- Select ${typeLabel} --</option>
         </select>
         <small class="js-form-help">🔄 Loading ${typeLabel}s...</small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2303,10 +2374,9 @@
           <option value="">-- Select ${taxonomyLabel} --</option>
         </select>
         <small class="js-form-help">🔄 Loading terms...</small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2333,10 +2403,9 @@
           <option value="">-- Select Menu --</option>
         </select>
         <small class="js-form-help">🔄 Loading menus...</small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2363,10 +2432,9 @@
           <option value="">-- Select Sidebar --</option>
         </select>
         <small class="js-form-help">🔄 Loading sidebars...</small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2390,20 +2458,18 @@
           data-type="string"
         >
           ${property.enum
-            .map((option, idx) => {
-              const label = property.enumNames
-                ? property.enumNames[idx]
-                : option;
-              return `<option value="${escapeHtml(option)}" ${
-                value === option ? "selected" : ""
+          .map((option, idx) => {
+            const label = property.enumNames
+              ? property.enumNames[idx]
+              : option;
+            return `<option value="${escapeHtml(option)}" ${value === option ? "selected" : ""
               }>${escapeHtml(label)}</option>`;
-            })
-            .join("")}
+          })
+          .join("")}
         </select>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2425,10 +2491,9 @@
           />
           ${escapeHtml(title)}
         </label>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2458,10 +2523,9 @@
           data-type="number"
           ${min} ${max} ${step}
         />
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2481,10 +2545,9 @@
           data-setting="${fieldKey}"
           data-type="string"
         />
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2503,10 +2566,9 @@
           data-type="string"
           rows="4"
         >${escapeHtml(value)}</textarea>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2526,10 +2588,9 @@
           data-setting="${fieldKey}"
           data-type="string"
         />
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -2769,6 +2830,10 @@
     updateActiveTemplate();
     initExpandedSections();
     renderTemplateEditor();
+
+    // ✅ NUEVO
+    saveOriginalState();
+    updateSaveButtonState();
 
     showMessage(
       "success",
@@ -3023,15 +3088,14 @@
           >
             <option value="">-- Select Post Type --</option>
             ${state.availablePostTypes
-              .map(
-                (pt) =>
-                  `<option value="${escapeHtml(pt.name)}" ${
-                    state.selectedTemplate.post_type === pt.name
-                      ? "selected"
-                      : ""
-                  }>${escapeHtml(pt.label)}</option>`
-              )
-              .join("")}
+        .map(
+          (pt) =>
+            `<option value="${escapeHtml(pt.name)}" ${state.selectedTemplate.post_type === pt.name
+              ? "selected"
+              : ""
+            }>${escapeHtml(pt.label)}</option>`
+        )
+        .join("")}
           </select>
           <p class="js-form-help">
             Define which post type this template applies to. Leave empty for general templates.
@@ -3049,11 +3113,11 @@
           </label>
           <p class="js-form-help">
             Generates <code>${escapeHtml(
-              state.selectedTemplate._originalId || "template-name"
-            )}.php</code> and 
+          state.selectedTemplate._originalId || "template-name"
+        )}.php</code> and 
             <code>views/templates/${escapeHtml(
-              state.selectedTemplate._originalId || "template-name"
-            )}.twig</code>
+          state.selectedTemplate._originalId || "template-name"
+        )}.twig</code>
           </p>
         </div>
       </div>
@@ -3105,8 +3169,8 @@
             <span class="js-section-indicator">${schemaIndicator}</span>
             ${escapeHtml(sectionInfo.name || sectionType)}
             <small class="js-template-path">(${escapeHtml(
-              sectionType
-            )}.twig)</small>
+        sectionType
+      )}.twig)</small>
           </h3>
           <div class="js-section-actions">
             <button class="js-button js-button-secondary js-button-sm js-move-up" title="Subir">↑</button>
@@ -3182,8 +3246,8 @@
             data-section="${sectionKey}" 
             data-block-type="${blockId}"
             title="${escapeHtml(
-              blockDef.description || "Add block " + blockDef.name
-            )}"
+          blockDef.description || "Add block " + blockDef.name
+        )}"
           >
             + ${escapeHtml(blockDef.name)}
           </button>
@@ -3235,8 +3299,8 @@
       html += `
       <div class="js-no-schema">
         <p>This section does not have a schema defined in <code>schemas/${escapeHtml(
-          sectionType
-        )}.php</code></p>
+        sectionType
+      )}.php</code></p>
         <p>The variables will be available in the Twig template as:</p>
         <ul>
           <li><code>{{ section.settings.variable_name }}</code> for settings</li>
@@ -3279,13 +3343,12 @@
           <button class="js-button js-button-secondary js-button-sm js-move-block-down" title="Bajar bloque">↓</button>
           <select class="js-block-type-selector" data-section="${sectionKey}" data-block-index="${blockIndex}">
             ${Object.entries(allBlocksDefinition)
-              .map(
-                ([id, def]) =>
-                  `<option value="${escapeHtml(id)}" ${
-                    id === blockType ? "selected" : ""
-                  }>${escapeHtml(def.name)}</option>`
-              )
-              .join("")}
+        .map(
+          ([id, def]) =>
+            `<option value="${escapeHtml(id)}" ${id === blockType ? "selected" : ""
+            }>${escapeHtml(def.name)}</option>`
+        )
+        .join("")}
           </select>
           <button class="js-button js-button-danger js-button-sm js-remove-block" title="Eliminar bloque">×</button>
         </div>
@@ -3775,13 +3838,11 @@
           ${mediaType === "image" ? "📷 Select Image" : "📎 Select File"}
         </button>
       </div>
-      <div id="${previewId}" class="js-image-preview" style="${
-        hasMedia ? "" : "display: none;"
-      }">
-        ${
-          hasMedia
-            ? `<div class="js-media-preview-loading">Loading preview...</div>`
-            : ""
+      <div id="${previewId}" class="js-image-preview" style="${hasMedia ? "" : "display: none;"
+        }">
+        ${hasMedia
+          ? `<div class="js-media-preview-loading">Loading preview...</div>`
+          : ""
         }
         <button 
           class="js-button js-button-danger js-remove-image" 
@@ -3790,11 +3851,10 @@
           type="button">×</button>
       </div>
       <small class="js-form-help">Disponible en Twig como: <code>{{ ${context}.settings.${fieldKey}|attachment_url }}</code></small>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
 
@@ -3819,9 +3879,9 @@
         <textarea 
           id="${fieldId}"
           class="js-form-textarea ${inputClasses.replace(
-            "js-form-input",
-            "js-form-textarea"
-          )}" 
+        "js-form-input",
+        "js-form-textarea"
+      )}" 
           data-setting="${fieldKey}"
           data-type="string"
           data-context="${context}"
@@ -3829,20 +3889,18 @@
           ${blockIndex !== null ? `data-block-index="${blockIndex}"` : ""}
           rows="6"
         >${escapeHtml(value)}</textarea>
-        ${
-          expandable
-            ? `
+        ${expandable
+          ? `
           <button class="js-button js-button-secondary js-expand-code" style="margin-top: 5px;">
             ⛶ Expandir Editor
           </button>
         `
-            : ""
+          : ""
         }
         <small class="js-form-help">Disponible en Twig como: <code>{{ ${context}.settings.${fieldKey} }}</code></small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -3857,30 +3915,28 @@
         <label class="js-form-label">${escapeHtml(title)}</label>
         <select 
           class="js-form-select ${inputClasses.replace(
-            "js-form-input",
-            "js-form-select"
-          )}" 
+        "js-form-input",
+        "js-form-select"
+      )}" 
           data-setting="${fieldKey}" 
           data-type="string"
           data-context="${context}"
           ${blockIndex !== null ? `data-block-index="${blockIndex}"` : ""}
         >
           ${property.enum
-            .map((option, idx) => {
-              const label = property.enumNames
-                ? property.enumNames[idx]
-                : option;
-              return `<option value="${escapeHtml(option)}" ${
-                value === option ? "selected" : ""
+          .map((option, idx) => {
+            const label = property.enumNames
+              ? property.enumNames[idx]
+              : option;
+            return `<option value="${escapeHtml(option)}" ${value === option ? "selected" : ""
               }>${escapeHtml(label)}</option>`;
-            })
-            .join("")}
+          })
+          .join("")}
         </select>
         <small class="js-form-help">Disponible en Twig como: <code>{{ ${context}.settings.${fieldKey} }}</code></small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -3905,10 +3961,9 @@
           ${escapeHtml(title)}
         </label>
         <small class="js-form-help">Disponible en Twig como: <code>{{ ${context}.settings.${fieldKey} }}</code></small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -3941,10 +3996,9 @@
           ${min} ${max} ${step}
         />
         <small class="js-form-help">Disponible en Twig como: <code>{{ ${context}.settings.${fieldKey} }}</code></small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -3967,10 +4021,9 @@
           ${blockIndex !== null ? `data-block-index="${blockIndex}"` : ""}
         />
         <small class="js-form-help">Disponible en Twig como: <code>{{ ${context}.settings.${fieldKey} }}</code></small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -3985,9 +4038,9 @@
         <label class="js-form-label">${escapeHtml(title)}</label>
         <textarea 
           class="js-form-textarea ${inputClasses.replace(
-            "js-form-input",
-            "js-form-textarea"
-          )}" 
+        "js-form-input",
+        "js-form-textarea"
+      )}" 
           data-setting="${fieldKey}"
           data-type="string"
           data-context="${context}"
@@ -3995,10 +4048,9 @@
           rows="4"
         >${escapeHtml(value)}</textarea>
         <small class="js-form-help">Disponible en Twig como: <code>{{ ${context}.settings.${fieldKey} }}</code></small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
@@ -4022,9 +4074,9 @@
       <textarea 
         id="${fieldId}"
         class="js-form-textarea ${inputClasses.replace(
-          "js-form-input",
-          "js-form-textarea"
-        )}" 
+        "js-form-input",
+        "js-form-textarea"
+      )}" 
         data-setting="${fieldKey}"
         data-type="string"
         data-context="${context}"
@@ -4032,21 +4084,19 @@
         ${blockIndex !== null ? `data-block-index="${blockIndex}"` : ""}
         rows="8"
       >${escapeHtml(value)}</textarea>
-      ${
-        expandable
+      ${expandable
           ? `
         <button class="js-button js-button-secondary js-expand-code" style="margin-top: 5px;">
           ⛶ Expandir Editor
         </button>
       `
           : ""
-      }
+        }
       <small class="js-form-help">Disponible en Twig como: <code>{{ ${context}.settings.${fieldKey}|raw }}</code></small>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
     }
@@ -4069,11 +4119,10 @@
         placeholder="https://youtube.com/watch?v=..."
       />
       <small class="js-form-help">📹 Acepta YouTube, Vimeo, etc.</small>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
     }
@@ -4106,18 +4155,16 @@
           📎 Select
         </button>
       </div>
-      ${
-        hasFile
+      ${hasFile
           ? `<small class="js-form-help">📄 ${escapeHtml(
-              value.split("/").pop()
-            )}</small>`
+            value.split("/").pop()
+          )}</small>`
           : ""
-      }
-      ${
-        description
+        }
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
     }
@@ -4141,11 +4188,10 @@
         style="font-family: monospace;"
       />
       <small class="js-form-help">📌 Se ejecutará con do_shortcode() en Twig</small>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
     }
@@ -4172,9 +4218,9 @@
       <select 
         id="${fieldId}"
         class="js-form-select ${inputClasses.replace(
-          "js-form-input",
-          "js-form-select"
-        )} js-post-select" 
+        "js-form-input",
+        "js-form-select"
+      )} js-post-select" 
         data-setting="${fieldKey}" 
         data-type="string"
         data-context="${context}"
@@ -4184,11 +4230,10 @@
         <option value="">-- Select ${typeLabel} --</option>
       </select>
       <small class="js-form-help">🔄 Cargando ${typeLabel}s...</small>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
 
@@ -4212,9 +4257,9 @@
       <select 
         id="${fieldId}"
         class="js-form-select ${inputClasses.replace(
-          "js-form-input",
-          "js-form-select"
-        )} js-taxonomy-select" 
+        "js-form-input",
+        "js-form-select"
+      )} js-taxonomy-select" 
         data-setting="${fieldKey}" 
         data-type="string"
         data-context="${context}"
@@ -4224,11 +4269,10 @@
         <option value="">-- Select ${taxonomyLabel} --</option>
       </select>
       <small class="js-form-help">🔄 Cargando términos...</small>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
 
@@ -4248,9 +4292,9 @@
       <select 
         id="${fieldId}"
         class="js-form-select ${inputClasses.replace(
-          "js-form-input",
-          "js-form-select"
-        )} js-menu-select" 
+        "js-form-input",
+        "js-form-select"
+      )} js-menu-select" 
         data-setting="${fieldKey}" 
         data-type="string"
         data-context="${context}"
@@ -4259,11 +4303,10 @@
         <option value="">-- Select Menu --</option>
       </select>
       <small class="js-form-help">🔄 Cargando menús...</small>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
 
@@ -4283,9 +4326,9 @@
       <select 
         id="${fieldId}"
         class="js-form-select ${inputClasses.replace(
-          "js-form-input",
-          "js-form-select"
-        )} js-sidebar-select" 
+        "js-form-input",
+        "js-form-select"
+      )} js-sidebar-select" 
         data-setting="${fieldKey}" 
         data-type="string"
         data-context="${context}"
@@ -4294,11 +4337,10 @@
         <option value="">-- Select Sidebar --</option>
       </select>
       <small class="js-form-help">🔄 Cargando sidebars...</small>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
 
@@ -4318,9 +4360,9 @@
       <label class="js-form-label">${escapeHtml(title)}</label>
       <textarea 
         class="js-form-textarea ${inputClasses.replace(
-          "js-form-input",
-          "js-form-textarea"
-        )}" 
+        "js-form-input",
+        "js-form-textarea"
+      )}" 
         data-setting="${fieldKey}"
         data-type="string"
         data-context="${context}"
@@ -4329,11 +4371,10 @@
         placeholder='{"label": "Inicio", "url": "/"}'
       >${escapeHtml(value)}</textarea>
       <small class="js-form-help">🔗 Un enlace por línea en formato JSON</small>
-      ${
-        description
+      ${description
           ? `<p class="js-form-help">${escapeHtml(description)}</p>`
           : ""
-      }
+        }
     </div>
   `;
     }
@@ -4360,10 +4401,9 @@
           ${placeholder}
         />
         <small class="js-form-help">Disponible en Twig como: <code>{{ ${context}.settings.${fieldKey} }}</code></small>
-        ${
-          description
-            ? `<p class="js-form-help">${escapeHtml(description)}</p>`
-            : ""
+        ${description
+          ? `<p class="js-form-help">${escapeHtml(description)}</p>`
+          : ""
         }
       </div>
     `;
